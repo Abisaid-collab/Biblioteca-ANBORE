@@ -1,0 +1,44 @@
+{
+  "fecha_hoy": "2025-11-20",
+  "libros": [
+    {
+      "id": "LIB-001",
+      "titulo": "Cien Años de Soledad",
+      "autor": "Gabriel García Márquez",
+      "ejemplares_totales": 3,
+      "copias_disponibles": 1
+    },
+    {
+      "id": "LIB-002",
+      "titulo": "El Algoritmo Definitivo",
+      "autor": "Pedro Domingos",
+      "ejemplares_totales": 2,
+      "copias_disponibles": 0
+    }
+  ],
+  "usuarios": [
+    {
+      "id": "USR-101",
+      "nombre": "Ana Gómez",
+      "estado": "activo",
+      "multa_pendiente": 0.0
+    },
+    {
+      "id": "USR-102",
+      "nombre": "Carlos López",
+      "estado": "activo",
+      "multa_pendiente": 50.0
+    }
+  ],
+  "prestamos": [
+    {
+      "id": "PRE-001",
+      "usuario_id": "USR-101",
+      "libro_id": "LIB-001",
+      "fecha_prestamo": "2025-11-15",
+      "fecha_vencimiento": "2025-11-22",
+      "renovaciones": 0,
+      "estado": "activo"
+    }
+  ]
+}
