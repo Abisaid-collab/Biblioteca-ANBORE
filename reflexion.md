@@ -1,6 +1,6 @@
 # Reflexión técnica del equipo
 
-**Equipo 07:** Abisaid Guadalupe Angulo Munguia (24040115) · Edgar Gael Reyes Quevedo (24040158) · Eduardo Borquez Navarrete (24040446)
+**Equipo ANBORE:** Abisaid Guadalupe Angulo Munguia (24040115) · Edgar Gael Reyes Quevedo (24040158) · Eduardo Borquez Navarrete (24040446)
 
 ## 1. Qué construimos
 

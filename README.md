@@ -1,4 +1,4 @@
-# Biblioteca-ANBORE — Agente LangChain (Parcial 2, Equipo 07)
+# Biblioteca-ANBORE — Agente LangChain (Parcial 2, Equipo ANBORE)
 
 Asistente conversacional para la atención automatizada de una **biblioteca**: búsqueda en el catálogo, consulta, registro, renovación y devolución de préstamos. Usa **LangChain**, **LangGraph** y **Groq** (`openai/gpt-oss-120b`).
 
@@ -60,7 +60,7 @@ Con `s` la operación se ejecuta (y el dominio aún puede rechazarla). Con `n` n
 
 ## Entrega en .zip y seguridad
 
-El archivo `parcial2-equipo-07.zip` se genera con `git archive`, así que **solo contiene archivos versionados**. Por seguridad **no incluye**:
+El archivo `parcial2-ANBORE.zip` se genera con `git archive`, así que **solo contiene archivos versionados**. Por seguridad **no incluye**:
 
 - `.env`: la `GROQ_API_KEY` del equipo es personal y nunca se comparte.
 - `.venv/`, `__pycache__/` y `.pytest_cache/`: se regeneran con los pasos de arriba.
