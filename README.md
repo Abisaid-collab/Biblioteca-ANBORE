@@ -58,6 +58,15 @@ Durante la conversación, cuando el agente intenta registrar, renovar o devolver
 
 Con `s` la operación se ejecuta (y el dominio aún puede rechazarla). Con `n` no se modifica nada.
 
+## Entrega en .zip y seguridad
+
+El archivo `parcial2-equipo-07.zip` se genera con `git archive`, así que **solo contiene archivos versionados**. Por seguridad **no incluye**:
+
+- `.env`: la `GROQ_API_KEY` del equipo es personal y nunca se comparte.
+- `.venv/`, `__pycache__/` y `.pytest_cache/`: se regeneran con los pasos de arriba.
+
+Para ejecutar el agente, el evaluador debe copiar `.env.example` a `.env` y poner **su propia** clave de Groq (paso 2). Las pruebas (`pytest pruebas`) **no necesitan clave** ni conexión a internet.
+
 ## Datos de prueba
 
 | ID | Descripción |
