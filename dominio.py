@@ -1,5 +1,8 @@
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
+
+RUTA_DATOS = Path(__file__).parent / "datos.json"
 
 
 class ErrorDeNegocio(Exception):
@@ -97,3 +100,8 @@ class ServicioBiblioteca:
         prestamo["fecha_vencimiento"] = nueva_fecha.strftime("%Y-%m-%d")
         prestamo["renovaciones"] += 1
         return prestamo
+
+
+def cargar_servicio(ruta=None) -> ServicioBiblioteca:
+    """Crea el servicio con los datos de `ruta` (por defecto, el datos.json del proyecto)."""
+    return ServicioBiblioteca(ruta or RUTA_DATOS)

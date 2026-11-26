@@ -5,7 +5,10 @@ import pytest
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 
+from langgraph.types import Command
+
 from dominio import ErrorDeNegocio
+from herramientas import Contexto
 from agente import ACCIONES_CON_APROBACION, crear_agente
 
 
@@ -82,28 +85,61 @@ class ModeloFalso(GenericFakeChatModel):
         return self
 
 
-def test_escritura_se_pausa_hasta_aprobacion():
-    llamada = {"name": "registrar_prestamo", "args": {"usuario_id": "USR-101", "libro_id": "LIB-001"}, "id": "1"}
-    modelo = ModeloFalso(messages=iter([AIMessage(content="", tool_calls=[llamada])]))
-    agente = crear_agente(modelo=modelo)
+PRESTAR = {"name": "registrar_prestamo", "args": {"usuario_id": "USR-101", "libro_id": "LIB-001"}, "id": "1"}
+CONFIG = {"configurable": {"thread_id": "t"}}
 
-    resultado = agente.invoke({"messages": [("user", "Presta LIB-001 a USR-101")]}, {"configurable": {"thread_id": "t"}})
 
-    assert "__interrupt__" in resultado
+def agente_falso(*respuestas):
+    return crear_agente(ModeloFalso(messages=iter(respuestas)))
+
+
+def test_escritura_se_pausa_hasta_aprobacion(servicio):
+    agente = agente_falso(AIMessage(content="", tool_calls=[PRESTAR]))
+
+    resultado = agente.invoke({"messages": [("user", "Presta LIB-001 a USR-101")]}, CONFIG, context=Contexto(servicio))
+
     assert resultado["__interrupt__"][0].value["action_requests"][0]["name"] == "registrar_prestamo"
+    assert len(servicio.datos["prestamos"]) == 1  # Pausado: todavía no se escribió nada.
 
 
-def test_escritura_rechazada_no_modifica_datos():
-    from langgraph.types import Command
-    from herramientas import servicio
+def test_escritura_aprobada_se_ejecuta(servicio):
+    agente = agente_falso(AIMessage(content="", tool_calls=[PRESTAR]), AIMessage(content="Listo."))
+    contexto = Contexto(servicio)
 
-    llamada = {"name": "registrar_prestamo", "args": {"usuario_id": "USR-101", "libro_id": "LIB-001"}, "id": "1"}
-    modelo = ModeloFalso(messages=iter([AIMessage(content="", tool_calls=[llamada]), AIMessage(content="Cancelado.")]))
-    agente = crear_agente(modelo=modelo)
-    config = {"configurable": {"thread_id": "t"}}
+    agente.invoke({"messages": [("user", "Presta LIB-001 a USR-101")]}, CONFIG, context=contexto)
+    agente.invoke(Command(resume={"decisions": [{"type": "approve"}]}), CONFIG, context=contexto)
+
+    assert servicio.datos["prestamos"][-1]["id"] == "PRE-002"
+
+
+def test_escritura_rechazada_no_modifica_datos(servicio):
+    agente = agente_falso(AIMessage(content="", tool_calls=[PRESTAR]), AIMessage(content="Cancelado."))
+    contexto = Contexto(servicio)
     antes = copy.deepcopy(servicio.datos)
 
-    agente.invoke({"messages": [("user", "Presta LIB-001 a USR-101")]}, config)
-    agente.invoke(Command(resume={"decisions": [{"type": "reject", "message": "No aprobado."}]}), config)
+    agente.invoke({"messages": [("user", "Presta LIB-001 a USR-101")]}, CONFIG, context=contexto)
+    agente.invoke(Command(resume={"decisions": [{"type": "reject", "message": "No aprobado."}]}), CONFIG, context=contexto)
 
     assert servicio.datos == antes
+
+
+def test_lectura_no_pide_aprobacion(servicio):
+    buscar = {"name": "buscar_libro", "args": {"query": "cien"}, "id": "1"}
+    agente = agente_falso(AIMessage(content="", tool_calls=[buscar]), AIMessage(content="Sí lo tenemos."))
+
+    resultado = agente.invoke({"messages": [("user", "¿Tienen Cien Años?")]}, CONFIG, context=Contexto(servicio))
+
+    assert "__interrupt__" not in resultado
+    assert "Cien Años de Soledad" in resultado["messages"][-2].content
+
+
+def test_memoria_por_thread_id(servicio):
+    agente = agente_falso(AIMessage(content="Hola Ana."), AIMessage(content="Te llamas Ana."))
+    contexto = Contexto(servicio)
+
+    agente.invoke({"messages": [("user", "Me llamo Ana")]}, CONFIG, context=contexto)
+    resultado = agente.invoke({"messages": [("user", "¿Cómo me llamo?")]}, CONFIG, context=contexto)
+
+    assert [m.content for m in resultado["messages"]][0] == "Me llamo Ana"  # El hilo recuerda el mensaje anterior.
+    otro_hilo = agente.get_state({"configurable": {"thread_id": "otro"}}).values
+    assert not otro_hilo  # Otro thread_id empieza sin historial.

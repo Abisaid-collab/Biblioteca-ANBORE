@@ -1,6 +1,43 @@
 # Reflexión técnica del equipo
 
-**Equipo 07:** Abisaid Guadalupe Angulo Munguia (24040115) · Edgar Gael Reyes Quevedo (24040158) · Eduardo Borquez Navarrete (24040446)
+**Equipo:** Abisaid Guadalupe Angulo Munguia (24040115) · Edgar Gael Reyes Quevedo (24040158) · Eduardo Borquez Navarrete (24040446)
+
+## Respuestas a lo que pide el enunciado
+
+### 1. Un caso en que el modelo inventó un dato, y qué cambiamos
+
+Cuando el bibliotecario **rechazó** una devolución, el modelo le dijo al usuario que el préstamo "no corresponde a un préstamo activo... si ya se devolvió, si el número es incorrecto o si pertenece a otro usuario". Todo era falso: `PRE-001` estaba activo y era correcto. La causa fue que el mensaje de rechazo era ambiguo ("El bibliotecario rechazó la operación."), y el modelo rellenó el hueco con una explicación inventada. Lo cambiamos por un mensaje explícito, `MENSAJE_RECHAZO_HUMANO` en `agente.py`, que dice que no se ejecutó y que no es un error del sistema. Al repetir la prueba, el agente respondió correctamente. Detalle completo en la sección 3, punto 5.
+
+También inventó servicios que no existen: ofreció "reservar" un libro y pagar "en el portal de usuarios" (sección 5). No causaron daño porque el modelo solo puede actuar mediante las 5 herramientas.
+
+### 2. Una regla que nos costó implementar y cómo la probamos
+
+**La multa por devolución tardía.** Depende de la fecha, y el enunciado prohíbe `date.today()`. Por eso se calcula con `fecha_hoy` de `datos.json`: `(fecha_hoy - fecha_vencimiento).days × $10`. En la misma operación hay que hacer tres cambios consistentes: sumar la multa al usuario, devolver la copia al inventario y marcar el préstamo como `"devuelto"`.
+
+Para probarla sin modificar `datos.json`, la prueba `test_devolucion_tardia_genera_multa` mueve la fecha del servicio al 25 de noviembre (3 días después del vencimiento). Luego verifica los tres efectos: multa de $30.00, `multa_pendiente` del usuario en $30.00 y copias disponibles de 1 a 2. Su contraparte, `test_renovacion_prestamo_vencido_falla`, usa el mismo truco de fecha para comprobar que un préstamo vencido no se puede renovar.
+
+### 3. Qué pasaría si las reglas estuvieran solo en el prompt
+
+Serían **sugerencias, no garantías**:
+
+- **El modelo no es determinista.** Puede olvidar una regla en una conversación larga, aplicarla mal o "convencerse" de hacer una excepción si el usuario insiste ("es urgente, préstamelo aunque tenga multa").
+- **Ya vimos que inventa.** En nuestras conversaciones inventó causas de rechazo y servicios que no existen. Con las reglas en el prompt, inventaría también si una operación es válida.
+- **La aprobación humana no basta.** En las conversaciones 2 y 3 el bibliotecario aprobó operaciones prohibidas (préstamo con multa y segunda renovación), y solo el dominio las bloqueó. Sin dominio, esas operaciones se habrían ejecutado.
+- **No se podrían probar.** Las 57 pruebas de este proyecto corren sin modelo, en menos de un segundo. Unas reglas escritas en el prompt solo se podrían "probar" conversando, y el resultado cambiaría en cada corrida.
+
+Por eso las reglas viven en `dominio.py`, y el prompt solo le pide al modelo que **explique** los rechazos.
+
+### 4. Qué hizo cada integrante
+
+| Integrante | Rol | Qué hizo |
+|---|---|---|
+| **Eduardo Borquez Navarrete** | Dominio | `dominio.py`: las reglas de préstamo, devolución con multa y renovación, la validación antes de mutar y `cargar_servicio`. `test_equipo.py`: una prueba por regla, más la de inviolabilidad del estado. `REGLAS.md` y `datos.json`. |
+| **Edgar Gael Reyes Quevedo** | Herramientas | `herramientas.py`: las 5 `@tool` con sus descripciones, la captura de `ErrorDeNegocio` como `RECHAZADO POR DOMINIO` y el contrato (`ESCENARIO`, `Contexto`, `HERRAMIENTAS`) con inyección por `ToolRuntime`. `test_publicos.py`: las pruebas de contrato y de seguridad. |
+| **Abisaid Guadalupe Angulo Munguia** | Agente | `agente.py`: el prompt, `HumanInTheLoopMiddleware`, el checkpointer, la consola y `MENSAJE_RECHAZO_HUMANO`. Pruebas del agente con modelo falso (aprobar, rechazar, memoria). Las conversaciones reales, el README, el lanzador `iniciar.bat` y la migración del modelo de Groq. |
+
+Los tres revisamos el código de los demás para poder explicar cualquier archivo en el cuestionario individual.
+
+---
 
 ## 1. Qué construimos
 
@@ -46,14 +83,20 @@ La idea central es que el LLM es la parte **menos confiable** del sistema, así 
 
 7. **IDs de préstamo mal formados.** `f"PRE-00{n}"` produce `PRE-0010` a partir del décimo préstamo. Lo cambiamos a `f"PRE-{n:03d}"`.
 
-8. **Ruta relativa de `datos.json`.** `ServicioBiblioteca()` buscaba el archivo en el directorio actual, así que fallaba al correr `pytest` desde `pruebas/`. `herramientas.py` ahora pasa la ruta absoluta, y las pruebas usan una copia temporal para nunca tocar el original.
+8. **Servicio global en las herramientas.** El prompt creaba un `ServicioBiblioteca()` global con ruta relativa: fallaba al correr `pytest` desde `pruebas/` y todas las pruebas compartían el mismo estado. Lo cambiamos al contrato que pide el enunciado: `cargar_servicio(ruta=None)` crea el servicio y cada herramienta lo recibe por `ToolRuntime[Contexto]`, un parámetro que el modelo no ve. Ahora cada prueba usa su propia copia de `datos.json` y nunca toca el original.
 
 ## 4. Estrategia de pruebas
 
-Tenemos 51 pruebas, todas sin red ni API key:
+Tenemos 57 pruebas, todas sin red ni API key:
 
-- **`test_equipo.py` (12):** cada regla de negocio (multa, stock, suspendido, límite de 3, vencimiento a 7 días, multa de $10/día, una sola renovación, no renovar vencidos), la inviolabilidad del estado y el HITL con un **modelo falso**. Las pruebas de HITL verifican que una escritura se pausa y que un rechazo humano no modifica los datos.
-- **`test_publicos.py` (39):** el contrato del proyecto. Revisan archivos, firmas exactas, estructura de los retornos, nombres de herramientas, que no haya API keys en el código, que el dominio no use la fecha real y que `.env` esté excluido de git.
+- **`test_equipo.py` (15):**
+  - una por cada regla de negocio: multa, stock, suspendido, límite de 3, vencimiento a 7 días, multa de $10/día, una sola renovación y no renovar vencidos;
+  - la inviolabilidad del estado;
+  - el agente con un **modelo falso**: una escritura se pausa, aprobada se ejecuta y rechazada no cambia los datos; una lectura no pide aprobación, y la memoria funciona por `thread_id`.
+- **`test_publicos.py` (42):** el contrato del proyecto. El profesor no entregó la plantilla, así que este archivo lo escribimos nosotros siguiendo el enunciado. Revisa:
+  - archivos, firmas exactas y estructura de los retornos;
+  - los nombres del contrato (`ESCENARIO`, `cargar_servicio`, `Contexto`, `HERRAMIENTAS`) y que el modelo no vea el contexto;
+  - que no haya API keys en el código, que el dominio no use la fecha real y que `.env` esté excluido de git.
 
 Que el dominio sea independiente del LLM es lo que permite probar todas las reglas en menos de un segundo. Las conversaciones reales complementan las pruebas: verifican lo que una prueba unitaria no puede, que es **cómo se comporta el modelo**.
 
@@ -74,7 +117,6 @@ Que el dominio sea independiente del LLM es lo que permite probar todas las regl
 
 - **Sin persistencia en disco:** los cambios viven en memoria y cada ejecución arranca de la semilla de `datos.json`.
 - **Sin autenticación:** cualquiera puede decir ser cualquier usuario. El HITL mitiga parcialmente este riesgo, porque el bibliotecario ve los parámetros antes de aprobar.
-- **Una sola instancia de `ServicioBiblioteca`:** sirve para un bibliotecario en una consola, no para varios usuarios simultáneos.
 - **Dependencia del proveedor:** ya nos pasó que el modelo desapareció. El desacoplamiento hizo que el cambio fuera trivial, pero las respuestas del agente pueden variar según el modelo.
 
 ## 7. Aprendizaje del equipo

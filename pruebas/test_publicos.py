@@ -2,7 +2,7 @@
 import inspect
 import json
 import re
-from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -85,9 +85,15 @@ def test_herramientas_tienen_descripcion():
     assert all(h.description for h in herramientas.HERRAMIENTAS)
 
 
-def test_herramientas_de_lectura_retornan_texto():
-    assert "Cien Años de Soledad" in herramientas.buscar_libro.invoke({"query": "cien"})
-    assert "PRE-001" in herramientas.consultar_prestamos.invoke({"usuario_id": "USR-101"})
+def correr(herramienta, servicio, **args):
+    """Ejecuta la función de la herramienta con el servicio inyectado, como lo hace el agente."""
+    runtime = SimpleNamespace(context=herramientas.Contexto(servicio=servicio))
+    return getattr(herramientas, herramienta).func(**args, runtime=runtime)
+
+
+def test_herramientas_de_lectura_retornan_texto(servicio):
+    assert "Cien Años de Soledad" in correr("buscar_libro", servicio, query="cien")
+    assert "PRE-001" in correr("consultar_prestamos", servicio, usuario_id="USR-101")
 
 
 @pytest.mark.parametrize("herramienta, args", [
@@ -95,9 +101,24 @@ def test_herramientas_de_lectura_retornan_texto():
     ("procesar_devolucion", {"prestamo_id": "PRE-999"}),
     ("renovar_prestamo", {"prestamo_id": "PRE-999"}),
 ])
-def test_herramientas_capturan_error_de_negocio(herramienta, args):
-    respuesta = getattr(herramientas, herramienta).invoke(args)
-    assert respuesta.startswith("RECHAZADO POR DOMINIO:")
+def test_herramientas_capturan_error_de_negocio(servicio, herramienta, args):
+    assert correr(herramienta, servicio, **args).startswith("RECHAZADO POR DOMINIO:")
+
+
+def test_herramientas_ocultan_el_contexto_al_modelo():
+    for h in herramientas.HERRAMIENTAS:
+        assert "runtime" not in h.tool_call_schema.model_json_schema()["properties"]
+
+
+def test_contrato_de_herramientas():
+    assert herramientas.ESCENARIO == "biblioteca"
+    assert herramientas.ErrorDeNegocio is ErrorDeNegocio
+    assert isinstance(herramientas.cargar_servicio(), ServicioBiblioteca)
+    assert herramientas.Contexto(servicio="x").servicio == "x"
+
+
+def test_cargar_servicio_con_ruta(ruta_datos):
+    assert herramientas.cargar_servicio(ruta_datos).ruta_datos == ruta_datos
 
 
 # ---------- Contrato de agente.py ----------
