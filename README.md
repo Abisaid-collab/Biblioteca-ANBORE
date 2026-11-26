@@ -31,7 +31,18 @@ Usuario ──► agente.py ──► herramientas.py ──► dominio.py ─�
 
 ## Guía de ejecución
 
-Requisitos: Python 3.11+ y una clave de [Groq](https://console.groq.com/keys).
+### Forma rápida (recomendada)
+
+Requisito: tener instalado [Python 3.10+](https://www.python.org/downloads/).
+
+- **Windows:** doble clic en `iniciar.bat`.
+- **macOS / Linux:** `bash iniciar.sh`.
+
+La primera vez el lanzador crea el entorno e instala las dependencias (1 o 2 minutos). Después abre el chat con el agente. Si no encuentra `.env`, pide la `GROQ_API_KEY` y la guarda.
+
+### Forma manual
+
+Requisitos: Python 3.10+ y una clave de [Groq](https://console.groq.com/keys).
 
 ```bash
 # 1. Entorno virtual y dependencias
@@ -60,12 +71,18 @@ Con `s` la operación se ejecuta (y el dominio aún puede rechazarla). Con `n` n
 
 ## Entrega en .zip y seguridad
 
-El archivo `parcial2-ANBORE.zip` se genera con `git archive`, así que **solo contiene archivos versionados**. Por seguridad **no incluye**:
+Hay dos formas de distribuir el proyecto:
 
-- `.env`: la `GROQ_API_KEY` del equipo es personal y nunca se comparte.
-- `.venv/`, `__pycache__/` y `.pytest_cache/`: se regeneran con los pasos de arriba.
+| | GitHub | `parcial2-ANBORE.zip` (entrega) |
+|---|---|---|
+| `.env` con `GROQ_API_KEY` | **No** (excluido en `.gitignore`) | **Sí**, para que el evaluador ejecute `iniciar.bat` sin configurar nada |
+| `.venv/`, `__pycache__/`, `.pytest_cache/` | No | No (el lanzador los regenera) |
 
-Para ejecutar el agente, el evaluador debe copiar `.env.example` a `.env` y poner **su propia** clave de Groq (paso 2). Las pruebas (`pytest pruebas`) **no necesitan clave** ni conexión a internet.
+- **La clave nunca está en el código fuente:** `agente.py` la lee con `os.getenv("GROQ_API_KEY")`, y una prueba revisa que ningún `.py` contenga una clave.
+- **El zip se genera con `git archive`,** así que solo contiene archivos versionados más el `.env`. Ningún archivo local se cuela por accidente.
+- **La clave de la entrega es revocable:** el equipo la desactiva en la consola de Groq cuando termine la evaluación.
+
+Las pruebas (`pytest pruebas`) **no necesitan clave** ni conexión a internet.
 
 ## Datos de prueba
 
