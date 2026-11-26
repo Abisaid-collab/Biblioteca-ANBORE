@@ -1,6 +1,43 @@
 # Reflexión técnica del equipo
 
-**Equipo ANBORE:** Abisaid Guadalupe Angulo Munguia (24040115) · Edgar Gael Reyes Quevedo (24040158) · Eduardo Borquez Navarrete (24040446)
+**Equipo:** Abisaid Guadalupe Angulo Munguia (24040115) · Edgar Gael Reyes Quevedo (24040158) · Eduardo Borquez Navarrete (24040446)
+
+## Respuestas a lo que pide el enunciado
+
+### 1. Un caso en que el modelo inventó un dato, y qué cambiamos
+
+Cuando el bibliotecario **rechazó** una devolución, el modelo le dijo al usuario que el préstamo "no corresponde a un préstamo activo... si ya se devolvió, si el número es incorrecto o si pertenece a otro usuario". Todo era falso: `PRE-001` estaba activo y era correcto. La causa fue que el mensaje de rechazo era ambiguo ("El bibliotecario rechazó la operación."), y el modelo rellenó el hueco con una explicación inventada. Lo cambiamos por un mensaje explícito, `MENSAJE_RECHAZO_HUMANO` en `agente.py`, que dice que no se ejecutó y que no es un error del sistema. Al repetir la prueba, el agente respondió correctamente. Detalle completo en la sección 3, punto 5.
+
+También inventó servicios que no existen: ofreció "reservar" un libro y pagar "en el portal de usuarios" (sección 5). No causaron daño porque el modelo solo puede actuar mediante las 5 herramientas.
+
+### 2. Una regla que nos costó implementar y cómo la probamos
+
+**La multa por devolución tardía.** Depende de la fecha, y el enunciado prohíbe `date.today()`. Por eso se calcula con `fecha_hoy` de `datos.json`: `(fecha_hoy - fecha_vencimiento).days × $10`. En la misma operación hay que hacer tres cambios consistentes: sumar la multa al usuario, devolver la copia al inventario y marcar el préstamo como `"devuelto"`.
+
+Para probarla sin modificar `datos.json`, la prueba `test_devolucion_tardia_genera_multa` mueve la fecha del servicio al 25 de noviembre (3 días después del vencimiento). Luego verifica los tres efectos: multa de $30.00, `multa_pendiente` del usuario en $30.00 y copias disponibles de 1 a 2. Su contraparte, `test_renovacion_prestamo_vencido_falla`, usa el mismo truco de fecha para comprobar que un préstamo vencido no se puede renovar.
+
+### 3. Qué pasaría si las reglas estuvieran solo en el prompt
+
+Serían **sugerencias, no garantías**:
+
+- **El modelo no es determinista.** Puede olvidar una regla en una conversación larga, aplicarla mal o "convencerse" de hacer una excepción si el usuario insiste ("es urgente, préstamelo aunque tenga multa").
+- **Ya vimos que inventa.** En nuestras conversaciones inventó causas de rechazo y servicios que no existen. Con las reglas en el prompt, inventaría también si una operación es válida.
+- **La aprobación humana no basta.** En las conversaciones 2 y 3 el bibliotecario aprobó operaciones prohibidas (préstamo con multa y segunda renovación), y solo el dominio las bloqueó. Sin dominio, esas operaciones se habrían ejecutado.
+- **No se podrían probar.** Las 57 pruebas de este proyecto corren sin modelo, en menos de un segundo. Unas reglas escritas en el prompt solo se podrían "probar" conversando, y el resultado cambiaría en cada corrida.
+
+Por eso las reglas viven en `dominio.py`, y el prompt solo le pide al modelo que **explique** los rechazos.
+
+### 4. Qué hizo cada integrante
+
+| Integrante | Rol | Qué hizo |
+|---|---|---|
+| **Eduardo Borquez Navarrete** | Dominio | `dominio.py`: las reglas de préstamo, devolución con multa y renovación, la validación antes de mutar y `cargar_servicio`. `test_equipo.py`: una prueba por regla, más la de inviolabilidad del estado. `REGLAS.md` y `datos.json`. |
+| **Edgar Gael Reyes Quevedo** | Herramientas | `herramientas.py`: las 5 `@tool` con sus descripciones, la captura de `ErrorDeNegocio` como `RECHAZADO POR DOMINIO` y el contrato (`ESCENARIO`, `Contexto`, `HERRAMIENTAS`) con inyección por `ToolRuntime`. `test_publicos.py`: las pruebas de contrato y de seguridad. |
+| **Abisaid Guadalupe Angulo Munguia** | Agente | `agente.py`: el prompt, `HumanInTheLoopMiddleware`, el checkpointer, la consola y `MENSAJE_RECHAZO_HUMANO`. Pruebas del agente con modelo falso (aprobar, rechazar, memoria). Las conversaciones reales, el README, el lanzador `iniciar.bat` y la migración del modelo de Groq. |
+
+Los tres revisamos el código de los demás para poder explicar cualquier archivo en el cuestionario individual.
+
+---
 
 ## 1. Qué construimos
 

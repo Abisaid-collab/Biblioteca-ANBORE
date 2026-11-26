@@ -1,4 +1,6 @@
-# Biblioteca-ANBORE — Agente LangChain (Parcial 2, Equipo ANBORE)
+# parcial2-equipo-AbisaidAngulo-EduardoBorquez-EdgarReyes
+
+Agente LangChain para una biblioteca. Proyecto del Segundo Parcial.
 
 Asistente conversacional para la atención automatizada de una **biblioteca**: búsqueda en el catálogo, consulta, registro, renovación y devolución de préstamos. Usa **LangChain**, **LangGraph** y **Groq** (`openai/gpt-oss-120b`).
 
@@ -6,11 +8,11 @@ Asistente conversacional para la atención automatizada de una **biblioteca**: b
 
 ## Integrantes
 
-| Nombre | Matrícula |
-|--------|-----------|
-| Abisaid Guadalupe Angulo Munguia | 24040115 |
-| Edgar Gael Reyes Quevedo | 24040158 |
-| Eduardo Borquez Navarrete | 24040446 |
+| Nombre | Matrícula | Rol | Responsable de |
+|--------|-----------|-----|----------------|
+| Abisaid Guadalupe Angulo Munguia | 24040115 | Agente | `agente.py` (prompt, aprobación, memoria), conversaciones y README |
+| Edgar Gael Reyes Quevedo | 24040158 | Herramientas | `herramientas.py` (descripciones, validación, mensajes de error) y `test_publicos.py` |
+| Eduardo Borquez Navarrete | 24040446 | Dominio | `dominio.py`, `REGLAS.md`, `datos.json` y `test_equipo.py` |
 
 ## Escenario
 
