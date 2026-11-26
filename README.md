@@ -71,18 +71,12 @@ Con `s` la operación se ejecuta (y el dominio aún puede rechazarla). Con `n` n
 
 ## Entrega en .zip y seguridad
 
-Hay dos formas de distribuir el proyecto:
+El zip de entrega se genera con `git archive`, así que **solo contiene archivos versionados**. **No incluye**:
 
-| | GitHub | `parcial2-ANBORE.zip` (entrega) |
-|---|---|---|
-| `.env` con `GROQ_API_KEY` | **No** (excluido en `.gitignore`) | **Sí**, para que el evaluador ejecute `iniciar.bat` sin configurar nada |
-| `.venv/`, `__pycache__/`, `.pytest_cache/` | No | No (el lanzador los regenera) |
+- `.env`: la `GROQ_API_KEY` no se entrega.
+- `.venv/`, `__pycache__/` y `.pytest_cache/`: el lanzador los regenera.
 
-- **La clave nunca está en el código fuente:** `agente.py` la lee con `os.getenv("GROQ_API_KEY")`, y una prueba revisa que ningún `.py` contenga una clave.
-- **El zip se genera con `git archive`,** así que solo contiene archivos versionados más el `.env`. Ningún archivo local se cuela por accidente.
-- **La clave de la entrega es revocable:** el equipo la desactiva en la consola de Groq cuando termine la evaluación.
-
-Las pruebas (`pytest pruebas`) **no necesitan clave** ni conexión a internet.
+`agente.py` lee la clave con `os.getenv("GROQ_API_KEY")`, y una prueba revisa que ningún `.py` contenga una clave. Para conversar con el agente, `iniciar.bat` pide la clave la primera vez y la guarda en un `.env` local. Las pruebas (`pytest pruebas`) **no necesitan clave** ni conexión a internet.
 
 ## Datos de prueba
 
