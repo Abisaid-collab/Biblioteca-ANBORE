@@ -46,14 +46,20 @@ La idea central es que el LLM es la parte **menos confiable** del sistema, así 
 
 7. **IDs de préstamo mal formados.** `f"PRE-00{n}"` produce `PRE-0010` a partir del décimo préstamo. Lo cambiamos a `f"PRE-{n:03d}"`.
 
-8. **Ruta relativa de `datos.json`.** `ServicioBiblioteca()` buscaba el archivo en el directorio actual, así que fallaba al correr `pytest` desde `pruebas/`. `herramientas.py` ahora pasa la ruta absoluta, y las pruebas usan una copia temporal para nunca tocar el original.
+8. **Servicio global en las herramientas.** El prompt creaba un `ServicioBiblioteca()` global con ruta relativa: fallaba al correr `pytest` desde `pruebas/` y todas las pruebas compartían el mismo estado. Lo cambiamos al contrato que pide el enunciado: `cargar_servicio(ruta=None)` crea el servicio y cada herramienta lo recibe por `ToolRuntime[Contexto]`, un parámetro que el modelo no ve. Ahora cada prueba usa su propia copia de `datos.json` y nunca toca el original.
 
 ## 4. Estrategia de pruebas
 
-Tenemos 51 pruebas, todas sin red ni API key:
+Tenemos 57 pruebas, todas sin red ni API key:
 
-- **`test_equipo.py` (12):** cada regla de negocio (multa, stock, suspendido, límite de 3, vencimiento a 7 días, multa de $10/día, una sola renovación, no renovar vencidos), la inviolabilidad del estado y el HITL con un **modelo falso**. Las pruebas de HITL verifican que una escritura se pausa y que un rechazo humano no modifica los datos.
-- **`test_publicos.py` (39):** el contrato del proyecto. Revisan archivos, firmas exactas, estructura de los retornos, nombres de herramientas, que no haya API keys en el código, que el dominio no use la fecha real y que `.env` esté excluido de git.
+- **`test_equipo.py` (15):**
+  - una por cada regla de negocio: multa, stock, suspendido, límite de 3, vencimiento a 7 días, multa de $10/día, una sola renovación y no renovar vencidos;
+  - la inviolabilidad del estado;
+  - el agente con un **modelo falso**: una escritura se pausa, aprobada se ejecuta y rechazada no cambia los datos; una lectura no pide aprobación, y la memoria funciona por `thread_id`.
+- **`test_publicos.py` (42):** el contrato del proyecto. El profesor no entregó la plantilla, así que este archivo lo escribimos nosotros siguiendo el enunciado. Revisa:
+  - archivos, firmas exactas y estructura de los retornos;
+  - los nombres del contrato (`ESCENARIO`, `cargar_servicio`, `Contexto`, `HERRAMIENTAS`) y que el modelo no vea el contexto;
+  - que no haya API keys en el código, que el dominio no use la fecha real y que `.env` esté excluido de git.
 
 Que el dominio sea independiente del LLM es lo que permite probar todas las reglas en menos de un segundo. Las conversaciones reales complementan las pruebas: verifican lo que una prueba unitaria no puede, que es **cómo se comporta el modelo**.
 
@@ -74,7 +80,6 @@ Que el dominio sea independiente del LLM es lo que permite probar todas las regl
 
 - **Sin persistencia en disco:** los cambios viven en memoria y cada ejecución arranca de la semilla de `datos.json`.
 - **Sin autenticación:** cualquiera puede decir ser cualquier usuario. El HITL mitiga parcialmente este riesgo, porque el bibliotecario ve los parámetros antes de aprobar.
-- **Una sola instancia de `ServicioBiblioteca`:** sirve para un bibliotecario en una consola, no para varios usuarios simultáneos.
 - **Dependencia del proveedor:** ya nos pasó que el modelo desapareció. El desacoplamiento hizo que el cambio fuera trivial, pero las respuestas del agente pueden variar según el modelo.
 
 ## 7. Aprendizaje del equipo

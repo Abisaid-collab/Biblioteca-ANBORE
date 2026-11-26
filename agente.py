@@ -5,7 +5,7 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import HumanInTheLoopMiddleware
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
-from herramientas import HERRAMIENTAS
+from herramientas import HERRAMIENTAS, Contexto, cargar_servicio
 
 load_dotenv()
 
@@ -48,6 +48,7 @@ def crear_agente(modelo=None, checkpointer=None):
         model=modelo,
         tools=HERRAMIENTAS,
         system_prompt=PROMPT_SISTEMA,
+        context_schema=Contexto,
         checkpointer=checkpointer or MemorySaver(),
         middleware=[HumanInTheLoopMiddleware(interrupt_on={n: True for n in ACCIONES_CON_APROBACION})]
     )
@@ -58,10 +59,11 @@ def conversar():
     """Chat por consola. El bibliotecario aprueba o rechaza cada escritura."""
     agente = crear_agente()
     config = {"configurable": {"thread_id": "consola"}}
+    contexto = Contexto(servicio=cargar_servicio())
     print("Asistente de la biblioteca (escribe 'salir' para terminar)")
 
     while (texto := input("\nUsuario: ").strip()).lower() != "salir":
-        resultado = agente.invoke({"messages": [("user", texto)]}, config)
+        resultado = agente.invoke({"messages": [("user", texto)]}, config, context=contexto)
 
         while "__interrupt__" in resultado:
             decisiones = []
@@ -71,7 +73,7 @@ def conversar():
                     decisiones.append({"type": "approve"})
                 else:
                     decisiones.append({"type": "reject", "message": MENSAJE_RECHAZO_HUMANO})
-            resultado = agente.invoke(Command(resume={"decisions": decisiones}), config)
+            resultado = agente.invoke(Command(resume={"decisions": decisiones}), config, context=contexto)
 
         print("\nAsistente:", resultado["messages"][-1].content)
 

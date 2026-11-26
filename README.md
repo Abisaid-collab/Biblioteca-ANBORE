@@ -26,7 +26,7 @@ Usuario ──► agente.py ──► herramientas.py ──► dominio.py ─�
 | Archivo | Responsabilidad |
 |---------|-----------------|
 | `dominio.py` | Funciones puras sobre el JSON. Lanza `ErrorDeNegocio` si se viola una regla. |
-| `herramientas.py` | Envuelve cada método del dominio en una `@tool` (1:1) y convierte `ErrorDeNegocio` en `"RECHAZADO POR DOMINIO: ..."`. |
+| `herramientas.py` | Envuelve cada método del dominio en una `@tool` (1:1) y convierte `ErrorDeNegocio` en `"RECHAZADO POR DOMINIO: ..."`. Define el contrato `ESCENARIO`, `cargar_servicio`, `Contexto` y `HERRAMIENTAS`. |
 | `agente.py` | Prompt, modelo Groq, checkpointer (`MemorySaver`) y HITL (`HumanInTheLoopMiddleware`). Incluye un chat por consola. |
 
 ## Guía de ejecución
@@ -88,7 +88,8 @@ El proyecto se desarrolló con ayuda de IA (Claude Code), a partir de las instru
 | Modelo `llama-3.3-70b-versatile` | `openai/gpt-oss-120b` | Groq ya no ofrece ese modelo (`404 model_not_found`). |
 | Préstamo sin revisar si el usuario está suspendido | Validación de `estado == "suspendido"` | `REGLAS.md` la exige. |
 | IDs `f"PRE-00{n}"` | `f"PRE-{n:03d}"` | El original generaba `PRE-0010` desde el décimo préstamo. |
-| `ServicioBiblioteca()` con ruta relativa | Ruta absoluta en `herramientas.py` | Fallaba al ejecutar desde otra carpeta. |
+| `servicio = ServicioBiblioteca()` global con ruta relativa | `cargar_servicio(ruta=None)` + `Contexto(servicio=...)` inyectado con `ToolRuntime` | Es el contrato que pide el enunciado. Además, la ruta relativa fallaba desde otra carpeta, y con el servicio global todas las pruebas compartían estado. |
+| El profesor no entregó la plantilla (`REGLAS.md`, `datos.json`, `test_publicos.py`) | Los escribimos nosotros a partir del prompt y del enunciado | Sin plantilla, `test_publicos.py` verifica el contrato que lista el enunciado. |
 | Rechazo humano sin mensaje definido | `MENSAJE_RECHAZO_HUMANO` explícito | Con un mensaje ambiguo, el modelo inventó causas del rechazo (ver `reflexion.md`). |
 
 ### Qué agregamos más allá de lo pedido
